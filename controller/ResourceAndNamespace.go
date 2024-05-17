@@ -79,15 +79,15 @@ func (r *ResourceAndNamespace) CreateAllCoreV1IndexInformer(client *kubernetes.C
 			indexerList = append(indexerList, indexer)
 			informerList = append(informerList, informer)
 		case resource.ConfigMaps:
-			indexer, informer := cache.NewIndexerInformer(lw, &v1.ConfigMap{}, 0, InitHandleFunc(resource.Services, clusterName, worker), cache.Indexers{})
+			indexer, informer := cache.NewIndexerInformer(lw, &v1.ConfigMap{}, 0, InitHandleFunc(resource.ConfigMaps, clusterName, worker), cache.Indexers{})
 			indexerList = append(indexerList, indexer)
 			informerList = append(informerList, informer)
 		case resource.Secrets:
-			indexer, informer := cache.NewIndexerInformer(lw, &v1.Secret{}, 0, InitHandleFunc(resource.Services, clusterName, worker), cache.Indexers{})
+			indexer, informer := cache.NewIndexerInformer(lw, &v1.Secret{}, 0, InitHandleFunc(resource.Secrets, clusterName, worker), cache.Indexers{})
 			indexerList = append(indexerList, indexer)
 			informerList = append(informerList, informer)
 		case resource.Events:
-			indexer, informer := cache.NewIndexerInformer(lw, &v1.Event{}, 0, InitHandleFunc(resource.Services, clusterName, worker), cache.Indexers{})
+			indexer, informer := cache.NewIndexerInformer(lw, &v1.Event{}, 0, InitHandleFunc(resource.Events, clusterName, worker), cache.Indexers{})
 			indexerList = append(indexerList, indexer)
 			informerList = append(informerList, informer)
 		}
