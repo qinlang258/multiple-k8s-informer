@@ -2,7 +2,6 @@ package controller
 
 import (
 	"errors"
-	"fmt"
 	"multiple-k8s-informer/queue"
 	"multiple-k8s-informer/resource"
 	"multiple-k8s-informer/store"
@@ -44,7 +43,6 @@ type InformerList []cache.Controller
 
 func (informerList InformerList) Run(stopCh chan struct{}) {
 	for _, informer := range informerList {
-		fmt.Println("informer 开始启动")
 		go informer.Run(stopCh)
 
 		if !cache.WaitForCacheSync(stopCh, informer.HasSynced) {

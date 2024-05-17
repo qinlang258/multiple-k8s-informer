@@ -53,6 +53,7 @@ func NewMultiClusterInformer(maxReQueueTime int, clusters []controller.Cluster) 
 					indexerListRes, informerListRes = r.CreateAllAppsV1IndexInformer(client, core.Queue, cluster.ClusterName)
 				case resource.Daemonsets:
 					indexerListRes, informerListRes = r.CreateAllAppsV1IndexInformer(client, core.Queue, cluster.ClusterName)
+
 				case resource.Pods:
 					indexerListRes, informerListRes = r.CreateAllCoreV1IndexInformer(client, core.Queue, cluster.ClusterName)
 				case resource.ConfigMaps:
@@ -112,9 +113,9 @@ func NewMultiClusterInformer(maxReQueueTime int, clusters []controller.Cluster) 
 // process execute your own logic
 func process(obj queue.QueueObject) error {
 
-	if obj.Event == resource.EventAdd {
-		fmt.Println("目前监听到事件为add的资源对象", obj.ResourceType)
-	}
+	// if obj.Event == resource.EventAdd {
+	// 	fmt.Println("目前监听到事件为add的资源对象", obj.ResourceType)
+	// }
 
 	fmt.Println(time.Now(), obj.Event, obj.ResourceType, obj.Key, obj.ClusterName)
 	return nil
@@ -130,17 +131,17 @@ func main() {
 	r.AddEventHandler(func(object queue.QueueObject) error {
 		// only the add event
 		if object.Event == resource.EventAdd {
-			fmt.Println("目前监听到事件为add的资源对象", object.ResourceType)
+			fmt.Println("目前监听到事件为add的资源对象 adddddddddddddddd", object.ResourceType)
 		}
 		//fmt.Println("目前监听到的资源对象", obj.ResourceType, obj.Event)
 
-		if object.ClusterName == "cluster1" {
-			fmt.Println("目前监听到集群为cluster1的资源对象", object.ResourceType)
-		}
+		// if object.ClusterName == "cluster1" {
+		// 	fmt.Printf("目前监听到集群为 %s 的资源对象 %s \n", object.ClusterName, object.ResourceType)
+		// }
 
-		if object.ClusterName == "cluster2" {
-			fmt.Println("目前监听到集群为cluster2的资源对象", object.ResourceType)
-		}
+		// if object.ClusterName == "cluster2" {
+		// 	fmt.Printf("目前监听到集群为 %s 的资源对象 %s \n", object.ClusterName, object.ResourceType)
+		// }
 
 		fmt.Println(time.Now(), object.Event, object.ResourceType, object.Key, object.ClusterName)
 		return nil
