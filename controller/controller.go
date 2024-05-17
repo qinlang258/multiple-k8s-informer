@@ -22,6 +22,24 @@ type Cluster struct {
 	ClusterName string                 `json:"clusterName" yaml:"clusterName"`
 }
 
+// MultiClusterInformer 多集群informer的接口对象
+type MultiClusterInformer interface {
+	// Run 执行多集群的informer的方法
+	Run()
+	// Stop 停止informer
+	Stop()
+	// AddEventHandler 加入回调handler
+	AddEventHandler(handler HandleFunc)
+	// HandleObject 调用handler处理资源对象
+	HandleObject(object queue.QueueObject) error
+	// Queue 队列接口对象
+	queue.Queue
+	// Store 本地缓存接口对象
+	store.Store
+}
+
+var _ MultiClusterInformer = &Controller{}
+
 type InformerList []cache.Controller
 
 func (informerList InformerList) Run(stopCh chan struct{}) {
@@ -29,7 +47,7 @@ func (informerList InformerList) Run(stopCh chan struct{}) {
 		fmt.Println("informer 开始启动")
 		go informer.Run(stopCh)
 
-		if cache.WaitForCacheSync(stopCh, informer.HasSynced) {
+		if !cache.WaitForCacheSync(stopCh, informer.HasSynced) {
 			return
 		}
 
@@ -37,6 +55,7 @@ func (informerList InformerList) Run(stopCh chan struct{}) {
 }
 
 func (c *Cluster) NewClient() (*kubernetes.Clientset, error) {
+
 	if c.ConfigPath != "" {
 		config, err := clientcmd.BuildConfigFromFlags("", c.ConfigPath)
 		if err != nil {
@@ -96,21 +115,21 @@ func InitHandleFunc(resourceName, clusterName string, worker queue.Queue) cache.
 			key, err := cache.MetaNamespaceKeyFunc(obj)
 			if err == nil {
 				queueObj := queue.QueueObject{ClusterName: clusterName, ResourceType: resourceName, Event: resource.EventAdd, Obj: key, CreateAt: time.Now()}
-				worker.Push(queue.QueueObject(queueObj))
+				worker.Push(queueObj)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(newObj)
 			if err == nil {
 				queueObj := queue.QueueObject{ClusterName: clusterName, ResourceType: resourceName, Event: resource.EventUpdate, Obj: key, CreateAt: time.Now()}
-				worker.Push(queue.QueueObject(queueObj))
+				worker.Push(queueObj)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(obj)
 			if err == nil {
 				queueObj := queue.QueueObject{ClusterName: clusterName, ResourceType: resourceName, Event: resource.EventDelete, Obj: key, CreateAt: time.Now()}
-				worker.Push(queue.QueueObject(queueObj))
+				worker.Push(queueObj)
 			}
 		},
 	}

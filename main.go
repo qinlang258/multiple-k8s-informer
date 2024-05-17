@@ -2,69 +2,32 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
+	"multiple-k8s-informer/config"
 	"multiple-k8s-informer/controller"
 	"multiple-k8s-informer/queue"
 	"multiple-k8s-informer/resource"
 	"multiple-k8s-informer/store"
 	"time"
 
-	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 )
 
-var SysConfig *Config
-
-type Config struct {
-	MaxReQueueTime int `json:"maxRequeueTime" yaml:"maxRequeueTime"`
-	Clusters       []controller.Cluster
-}
-
-func NewConfig() *Config {
-	return &Config{}
-}
-
-func LoadConfig(path string) (*Config, error) {
-	config := NewConfig()
-	if b := loadConfigFile(path); b != nil {
-
-		err := yaml.Unmarshal(b, config)
-		if err != nil {
-			return nil, err
-		}
-		return config, err
-	} else {
-		return nil, fmt.Errorf("load config file error...")
-	}
-
-}
-
-func loadConfigFile(path string) []byte {
-	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
-	return b
-}
-
-func NewMultiClusterInformerFromConfig(path string) (controller.Controller, error) {
-	sysConfig, err := LoadConfig(path)
+func NewMultiClusterInformerFromConfig(path string) (controller.MultiClusterInformer, error) {
+	sysConfig, err := config.LoadConfig(path)
 	if err != nil {
 		klog.Error("load config error: ", err)
-		return controller.Controller{}, err
+		return nil, err
 	}
 
 	return NewMultiClusterInformer(sysConfig.MaxReQueueTime, sysConfig.Clusters)
 
 }
 
-func NewMultiClusterInformer(maxReQueueTime int, clusters []controller.Cluster) (controller.Controller, error) {
+func NewMultiClusterInformer(maxReQueueTime int, clusters []controller.Cluster) (controller.MultiClusterInformer, error) {
 	core := &controller.Controller{
 		Queue:  queue.NewQueue(maxReQueueTime),
-		StopCh: make(chan struct{}),
+		StopCh: make(chan struct{}, 1),
 	}
 
 	store := make(store.MapIndexers)
@@ -74,7 +37,7 @@ func NewMultiClusterInformer(maxReQueueTime int, clusters []controller.Cluster) 
 		//对每个集群 初始化一个 clientset
 		client, err := cluster.NewClient()
 		if err != nil {
-			return controller.Controller{}, err
+			return nil, err
 		}
 
 		for _, r := range cluster.List {
@@ -82,6 +45,7 @@ func NewMultiClusterInformer(maxReQueueTime int, clusters []controller.Cluster) 
 				//当 namespace为 all的时候单独处理
 				var indexerListRes []cache.Indexer
 				var informerListRes []cache.Controller
+
 				switch r.RType {
 				case resource.Deployments:
 					indexerListRes, informerListRes = r.CreateAllAppsV1IndexInformer(client, core.Queue, cluster.ClusterName)
@@ -142,7 +106,7 @@ func NewMultiClusterInformer(maxReQueueTime int, clusters []controller.Cluster) 
 	core.Informers = informers
 	core.Store = store
 
-	return *core, nil
+	return core, nil
 }
 
 // process execute your own logic
@@ -157,7 +121,7 @@ func process(obj queue.QueueObject) error {
 }
 
 func main() {
-	r, err := NewMultiClusterInformerFromConfig("config.yaml")
+	r, err := NewMultiClusterInformerFromConfig("./config.yaml")
 	if err != nil {
 		klog.Fatal("multi cluster informer err: ", err)
 	}
@@ -189,9 +153,6 @@ func main() {
 	// 4. Continuously remove resource objects from the queue
 	for {
 		obj, _ := r.Pop()
-		// method one：use handler
-		// If there is a problem with your own logic,
-		// you can put it back in the queue.
 		if err = r.HandleObject(obj); err != nil {
 			_ = r.ReQueue(obj) // reQueue
 		} else {

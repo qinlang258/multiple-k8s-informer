@@ -67,7 +67,7 @@ func (r *ResourceAndNamespace) CreateAllCoreV1IndexInformer(client *kubernetes.C
 	}
 
 	for _, values := range nsList.Items {
-		restClient := client.AppsV1().RESTClient()
+		restClient := client.CoreV1().RESTClient()
 		lw := cache.NewListWatchFromClient(restClient, r.RType, values.GetName(), fields.Everything())
 		switch r.RType {
 		case resource.Services:
